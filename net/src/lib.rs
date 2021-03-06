@@ -73,15 +73,21 @@ impl<P: StoreParams> NetworkService<P> {
 
         let swarm = Arc::new(Mutex::new(swarm));
         let swarm2 = swarm.clone();
-        async_global_executor::spawn::<_, ()>(future::poll_fn(move |cx| {
-            let mut guard = swarm.lock().unwrap();
-            while {
-                let swarm = &mut *guard;
-                pin_mut!(swarm);
-                swarm.poll_next(cx).is_ready()
-            } {}
-            Poll::Pending
-        }))
+        async_global_executor::spawn::<_, ()>(async move {
+            loop {
+                future::poll_fn(|cx| {
+                    tracing::trace!("poll swarm");
+                    let mut guard = swarm.lock();
+                    while {
+                        let swarm = &mut *guard;
+                        pin_mut!(swarm);
+                        swarm.poll_next(cx).is_ready()
+                    } {}
+                    Poll::Ready(())
+                })
+                .await
+            }
+        })
         .detach();
 
         Ok(Self { swarm: swarm2 })
