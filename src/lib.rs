@@ -19,15 +19,19 @@ pub use crate::net::{
 use crate::net::{BitswapStore, NetworkService};
 #[cfg(feature = "telemetry")]
 pub use crate::telemetry::telemetry;
+use async_trait::async_trait;
 use futures::stream::Stream;
 use libipld::codec::References;
 use libipld::error::BlockNotFound;
 pub use libipld::store::DefaultParams;
-use libipld::store::StoreParams;
-use libipld::{Block, Cid, Ipld, Result};
+use libipld::store::{Store, StoreParams};
+pub use libipld::{Block, Cid};
+use libipld::{Ipld, Result};
 use libp2p::kad::kbucket::Key as BucketKey;
+pub use libp2p::multiaddr;
 use prometheus::Registry;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 mod db;
 mod net;
@@ -350,7 +354,6 @@ where
     }
 }
 
-/*
 #[async_trait]
 impl<P: StoreParams> Store for Ipfs<P>
 where
@@ -397,13 +400,13 @@ where
     }
 
     async fn fetch(&self, cid: &Cid) -> Result<Block<Self::Params>> {
-        Ipfs::fetch(self, cid).await
+        Ipfs::fetch(self, cid, self.peers().into_iter()).await
     }
 
     async fn sync(&self, cid: &Cid) -> Result<()> {
-        Ipfs::sync(self, cid).await
+        Ipfs::sync(self, cid, self.peers()).await
     }
-}*/
+}
 
 #[cfg(test)]
 mod tests {
