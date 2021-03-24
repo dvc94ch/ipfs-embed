@@ -1,12 +1,13 @@
 use anyhow::Result;
+use async_process::Stdio;
 use futures::channel::mpsc;
 use futures::prelude::*;
+use futures_lite::io::BufReader;
 use ipfs_embed_cli::{Command, Event};
 use libipld::{alias, cbor::DagCborCodec, multihash::Code, Block, Cid, DagCbor, DefaultParams};
 use netsim_embed::{Ipv4Range, NetworkBuilder};
 use rand::RngCore;
-use std::io::{BufRead, BufReader, BufWriter, Write};
-use std::process::Stdio;
+use std::io::Write;
 use std::time::Instant;
 use structopt::StructOpt;
 use tempdir::TempDir;
@@ -96,6 +97,17 @@ async fn run_test(
     assert!(n_providers >= 1);
     assert!(n_providers < n_nodes);
 
+    let ipfs_embed_cli = std::env::current_exe()?
+        .parent()
+        .unwrap()
+        .join("ipfs-embed-cli");
+    if !ipfs_embed_cli.exists() {
+        return Err(anyhow::anyhow!(
+            "failed to find the ipfs-embed-cli binary at {}",
+            ipfs_embed_cli.display()
+        ));
+    }
+
     let temp_dir = if on_disk {
         let res = TempDir::new(name)?;
         println!("creating test database on disk in {}", res.path().display());
@@ -109,11 +121,12 @@ async fn run_test(
     let mut builder = NetworkBuilder::new(Ipv4Range::random_local_subnet());
     for i in 0..n_nodes {
         let path = path.clone();
+        let ipfs_embed_cli = ipfs_embed_cli.clone();
         builder.spawn_machine(
             move |mut cmd: mpsc::Receiver<Command>, mut event: mpsc::Sender<Event>| async move {
                 let node_name = format!("node-{}", i);
                 let path = path.map(|path| path.join(&node_name));
-                let mut c = std::process::Command::new("./ipfs-embed-cli");
+                let mut c = async_process::Command::new(ipfs_embed_cli);
                 c.stdin(Stdio::piped())
                     .stdout(Stdio::piped())
                     .arg("--node-name")
@@ -121,23 +134,32 @@ async fn run_test(
                 if let Some(path) = path {
                     c.arg("--path").arg(path);
                 }
-                let child = c.spawn().unwrap();
-                let mut stdout = BufReader::new(child.stdout.unwrap());
-                let mut stdin = BufWriter::new(child.stdin.unwrap());
-                let mut line = String::with_capacity(4096);
-                while let Some(cmd) = cmd.next().await {
-                    tracing::trace!("{}", cmd);
-                    writeln!(stdin, "{}", cmd).unwrap();
-                    stdin.flush().unwrap();
-                    loop {
-                        line.clear();
-                        stdout.read_line(&mut line).unwrap();
-                        if line.starts_with('<') {
-                            tracing::trace!("{}", line);
-                            event.send(line.parse().unwrap()).await.unwrap();
-                            break;
-                        } else {
-                            print!("{}", line);
+                let mut child = c.spawn().unwrap();
+                let mut stdout = BufReader::new(child.stdout.take().unwrap()).lines().fuse();
+                let mut stdin = child.stdin.unwrap();
+                let mut buf = Vec::with_capacity(4096);
+                loop {
+                    futures::select! {
+                        cmd = cmd.next() => {
+                            if let Some(cmd) = cmd {
+                                buf.clear();
+                                writeln!(buf, "{}", cmd).unwrap();
+                                stdin.write_all(&buf).await.unwrap();
+                            } else {
+                                break;
+                            }
+                        }
+                        ev = stdout.next() => {
+                            if let Some(ev) = ev {
+                                let ev = ev.unwrap();
+                                if ev.starts_with('<') {
+                                    event.send(ev.parse().unwrap()).await.unwrap();
+                                } else {
+                                    println!("{}", ev);
+                                }
+                            } else {
+                                break;
+                            }
                         }
                     }
                 }
@@ -161,7 +183,6 @@ async fn run_test(
         let node = network.machine(i);
         for (peer, addr) in &peers {
             node.send(Command::DialAddress(*peer, addr.clone())).await;
-            assert_eq!(node.recv().await, Some(Event::Done));
         }
     }
 
@@ -175,10 +196,8 @@ async fn run_test(
         for i in 0..n_nodes {
             let node = network.machine(i);
             node.send(Command::Alias(alias.clone(), Some(cid))).await;
-            assert_eq!(node.recv().await, Some(Event::Done));
-            for block in &blocks {
+            for block in blocks.iter().rev() {
                 node.send(Command::Insert(block.clone())).await;
-                assert_eq!(node.recv().await, Some(Event::Done));
             }
         }
     }
@@ -190,10 +209,8 @@ async fn run_test(
     for i in 0..n_providers {
         let node = network.machine(i);
         node.send(Command::Alias(root.to_string(), Some(cid))).await;
-        assert_eq!(node.recv().await, Some(Event::Done));
-        for block in &blocks {
+        for block in blocks.iter().rev() {
             node.send(Command::Insert(block.clone())).await;
-            assert_eq!(node.recv().await, Some(Event::Done));
         }
     }
 
@@ -203,7 +220,7 @@ async fn run_test(
     }
     for i in 0..n_nodes {
         let node = network.machine(i);
-        assert_eq!(node.recv().await, Some(Event::Done));
+        assert_eq!(node.recv().await, Some(Event::Flushed));
     }
 
     /* TODO
@@ -223,13 +240,12 @@ async fn run_test(
     target
         .send(Command::Alias(root.to_string(), Some(cid)))
         .await;
-    assert_eq!(target.recv().await, Some(Event::Done));
     let t0 = Instant::now();
     target.send(Command::Sync(cid)).await;
-    assert_eq!(target.recv().await, Some(Event::Done));
+    assert_eq!(target.recv().await, Some(Event::Synced));
 
     target.send(Command::Flush).await;
-    assert_eq!(target.recv().await, Some(Event::Done));
+    assert_eq!(target.recv().await, Some(Event::Flushed));
 
     println!(
         "{}, tree sync complete {} ms {} blocks {} bytes!",
@@ -268,6 +284,6 @@ fn main() -> Result<()> {
         opt.n_providers,
         opt.n_spam,
         !opt.in_memory,
-        || build_tree(10, 1),
+        || build_tree(10, 4),
     ))
 }

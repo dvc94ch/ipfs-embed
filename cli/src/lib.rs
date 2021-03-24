@@ -116,7 +116,8 @@ impl std::str::FromStr for Command {
 pub enum Event {
     ListeningOn(PeerId, Multiaddr),
     Block(Block<DefaultParams>),
-    Done,
+    Flushed,
+    Synced,
 }
 
 impl std::fmt::Display for Event {
@@ -129,7 +130,8 @@ impl std::fmt::Display for Event {
                     write!(f, "{:02x}", byte)?;
                 }
             }
-            Self::Done => write!(f, "<done")?,
+            Self::Flushed => write!(f, "<flushed")?,
+            Self::Synced => write!(f, "<synced")?,
         }
         Ok(())
     }
@@ -157,7 +159,8 @@ impl std::str::FromStr for Event {
                 let block = Block::new(cid, data)?;
                 Self::Block(block)
             }
-            Some("<done") => Self::Done,
+            Some("<flushed") => Self::Flushed,
+            Some("<synced") => Self::Synced,
             _ => return Err(anyhow::anyhow!("invalid event `{}`", s)),
         })
     }
@@ -198,7 +201,8 @@ mod tests {
                 "/ip4/10.152.124.10/tcp/42399".parse()?,
             ),
             //Event::Block(Block::new_unchecked("".parse()?, "hello world")),
-            Event::Done,
+            Event::Flushed,
+            Event::Synced,
         ];
         for ev in event.iter() {
             let ev2: Event = ev.to_string().parse()?;

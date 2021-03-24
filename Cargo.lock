@@ -1521,7 +1521,6 @@ dependencies = [
  "fnv",
  "futures",
  "ip_network",
- "ipfs-embed-cli",
  "ipfs-sqlite-block-store",
  "lazy_static",
  "libipld",
@@ -1530,12 +1529,9 @@ dependencies = [
  "libp2p-broadcast",
  "multihash",
  "names",
- "netsim-embed",
  "parking_lot",
  "prometheus",
  "rand 0.8.3",
- "structopt",
- "tempdir",
  "thiserror",
  "tide",
  "tracing",
@@ -1553,6 +1549,26 @@ dependencies = [
  "libipld",
  "multihash",
  "structopt",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "ipfs-embed-harness"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-global-executor",
+ "async-process",
+ "futures",
+ "futures-lite",
+ "ipfs-embed-cli",
+ "libipld",
+ "multihash",
+ "netsim-embed",
+ "rand 0.8.3",
+ "structopt",
+ "tempdir",
  "tracing",
  "tracing-subscriber",
 ]

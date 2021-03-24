@@ -48,7 +48,6 @@ async fn run() -> Result<()> {
                 if peer != peer_id {
                     ipfs.dial_address(&peer, addr)?;
                 }
-                writeln!(stdout, "{}", Event::Done)?;
             }
             Command::Get(cid) => {
                 let block = ipfs.get(&cid)?;
@@ -56,19 +55,17 @@ async fn run() -> Result<()> {
             }
             Command::Insert(block) => {
                 ipfs.insert(&block)?;
-                writeln!(stdout, "{}", Event::Done)?;
             }
             Command::Alias(alias, cid) => {
                 ipfs.alias(&alias, cid.as_ref())?;
-                writeln!(stdout, "{}", Event::Done)?;
             }
             Command::Flush => {
                 ipfs.flush().await?;
-                writeln!(stdout, "{}", Event::Done)?;
+                writeln!(stdout, "{}", Event::Flushed)?;
             }
             Command::Sync(cid) => {
                 ipfs.sync(&cid, ipfs.peers()).await?;
-                writeln!(stdout, "{}", Event::Done)?;
+                writeln!(stdout, "{}", Event::Synced)?;
             }
             Command::Exit => {
                 break;
