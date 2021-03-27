@@ -2289,8 +2289,6 @@ dependencies = [
 [[package]]
 name = "netsim-embed"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "537e84a257c7df74562bc62bc8a59b285c4f2ad60b1f05b2c6e0131f31310839"
 dependencies = [
  "async-global-executor",
  "env_logger",
@@ -2305,9 +2303,9 @@ dependencies = [
 [[package]]
 name = "netsim-embed-core"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a801ebd38331ee94a1788698018bbf3327833e16d01832e1aea54d66dc293c0"
 dependencies = [
+ "async-global-executor",
+ "async-io",
  "futures",
  "rand 0.8.3",
  "thiserror",
@@ -2316,8 +2314,6 @@ dependencies = [
 [[package]]
 name = "netsim-embed-machine"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb3fa33e409dba246fa335b0f2022702de37a20c40a8c1eb15a65a767f73d765"
 dependencies = [
  "async-global-executor",
  "async-io",
@@ -2332,8 +2328,6 @@ dependencies = [
 [[package]]
 name = "netsim-embed-nat"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a0e50409e164e6e3e0b5118b904be104a81c53ee1908febb3a21bdfd0be6dd4"
 dependencies = [
  "futures",
  "log 0.4.14",
@@ -2345,8 +2339,6 @@ dependencies = [
 [[package]]
 name = "netsim-embed-router"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3bbc1e405ada6f36c2c259c16e9e7a5df4766cc3d10cda41b2a7b74a03ae7471"
 dependencies = [
  "futures",
  "log 0.4.14",

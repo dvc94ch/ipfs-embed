@@ -5,10 +5,10 @@ use futures::prelude::*;
 use futures_lite::io::BufReader;
 use ipfs_embed_cli::{Command, Event};
 use libipld::{alias, cbor::DagCborCodec, multihash::Code, Block, Cid, DagCbor, DefaultParams};
-use netsim_embed::{Ipv4Range, NetworkBuilder};
+use netsim_embed::{Ipv4Range, NetworkBuilder, Wire};
 use rand::RngCore;
 use std::io::Write;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use structopt::StructOpt;
 use tempdir::TempDir;
 
@@ -26,6 +26,9 @@ struct BenchOpts {
 
     #[structopt(long)]
     in_memory: bool,
+
+    #[structopt(long, default_value = "0")]
+    delay_ms: u64,
 }
 
 #[derive(Debug, DagCbor)]
@@ -91,6 +94,7 @@ async fn run_test(
     n_providers: usize,
     n_spam: usize,
     on_disk: bool,
+    delay: Duration,
     create_test_data: impl Fn() -> Result<(Cid, Vec<Block<DefaultParams>>)>,
 ) -> Result<()> {
     assert!(n_nodes >= 2);
@@ -122,7 +126,10 @@ async fn run_test(
     for i in 0..n_nodes {
         let path = path.clone();
         let ipfs_embed_cli = ipfs_embed_cli.clone();
+        let mut wire = Wire::new();
+        wire.set_delay(delay);
         builder.spawn_machine(
+            wire,
             move |mut cmd: mpsc::Receiver<Command>, mut event: mpsc::Sender<Event>| async move {
                 let node_name = format!("node-{}", i);
                 let path = path.map(|path| path.join(&node_name));
@@ -284,6 +291,7 @@ fn main() -> Result<()> {
         opt.n_providers,
         opt.n_spam,
         !opt.in_memory,
+        Duration::from_millis(opt.delay_ms),
         || build_tree(10, 4),
     ))
 }

@@ -56,6 +56,8 @@ impl<P: StoreParams> NetworkService<P> {
     pub async fn new<S: BitswapStore<Params = P>>(config: NetworkConfig, store: S) -> Result<Self> {
         let transport = DnsConfig::system(
             TcpConfig::new() /*.port_reuse(true)*/
+                .send_buffer_size(2_000_000)
+                .recv_buffer_size(2_000_000)
                 .nodelay(true),
         )
         .await?;
