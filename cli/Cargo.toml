@@ -5,7 +5,7 @@ authors = ["David Craven <david@craven.ch>"]
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.39"
+anyhow = "1.0.40"
 async-std = { version = "1.9.0", features = ["attributes"] }
 ipfs-embed = { path = ".." }
 libipld = { version = "0.11.0", default-features = false, features = ["dag-cbor"] }
