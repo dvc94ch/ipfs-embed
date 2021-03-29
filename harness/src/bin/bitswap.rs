@@ -177,7 +177,7 @@ async fn run_test(
     let mut peers = Vec::with_capacity(n_nodes);
     for i in 0..n_nodes {
         let node = network.machine(i);
-        node.send(Command::ListenOn("/ip4/0.0.0.0/tcp/0".parse()?))
+        node.send(Command::ListenOn("/ip4/0.0.0.0/udp/0/quic".parse()?))
             .await;
         if let Some(Event::ListeningOn(peer, addr)) = node.recv().await {
             peers.push((peer, addr));

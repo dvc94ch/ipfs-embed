@@ -26,6 +26,7 @@ lazy_static = "1.4.0"
 libipld = { version = "0.11.0", default-features = false }
 libp2p-bitswap = "0.16.0"
 libp2p-broadcast = "0.2.0"
+libp2p-quic = { path = "../libp2p-quic-orig" }
 names = "0.11.0"
 parking_lot = "0.11.1"
 prometheus = "0.12.0"
@@ -64,5 +65,7 @@ debug = true
 
 [patch.crates-io]
 libp2p = { path = "../rust-libp2p" }
+libp2p-core = { path = "../rust-libp2p/core" }
 libp2p-bitswap = { path = "../libp2p-bitswap" }
 netsim-embed = { path = "../netsim-embed" }
+x509-signature = { path = "../barebones-x509" }

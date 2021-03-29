@@ -16,6 +16,7 @@ use libp2p::pnet::PnetConfig;
 use libp2p::swarm::{AddressScore, Swarm, SwarmBuilder};
 use libp2p::tcp::TcpConfig;
 use libp2p::yamux::YamuxConfig;
+use libp2p_quic::QuicConfig;
 use parking_lot::Mutex;
 use prometheus::Registry;
 use std::collections::HashSet;
@@ -54,13 +55,12 @@ pub struct NetworkService<P: StoreParams> {
 
 impl<P: StoreParams> NetworkService<P> {
     pub async fn new<S: BitswapStore<Params = P>>(config: NetworkConfig, store: S) -> Result<Self> {
-        let transport = DnsConfig::system(
-            TcpConfig::new() /*.port_reuse(true)*/
-                .send_buffer_size(2_000_000)
-                .recv_buffer_size(2_000_000)
-                .nodelay(true),
-        )
-        .await?;
+        /*let tcp = TcpConfig::new()
+            .send_buffer_size(2_000_000)
+            .recv_buffer_size(2_000_000)
+            .nodelay(true);
+            /*.port_reuse(true)*/
+
         let transport = if let Some(psk) = config.psk {
             EitherTransport::Left(
                 transport.and_then(move |socket, _| PnetConfig::new(psk).handshake(socket)),
@@ -79,7 +79,10 @@ impl<P: StoreParams> NetworkService<P> {
                 MplexConfig::new(),
             ))
             .timeout(Duration::from_secs(5))
-            .boxed();
+            .boxed();*/
+
+        let transport = QuicConfig::new(&config.node_key).await?;
+        //let transport = DnsConfig::system(transport).await?;
 
         let peer_id = config.peer_id();
         let behaviour = NetworkBackendBehaviour::<P>::new(config.clone(), store).await?;
